@@ -23,6 +23,7 @@ import android.content.ContextWrapper;
 import android.content.res.TypedArray;
 import android.os.Build;
 import android.os.Build.VERSION_CODES;
+import android.os.PersistableBundle;
 import androidx.annotation.LayoutRes;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -31,6 +32,9 @@ import android.view.ViewGroup;
 import android.view.ViewStub;
 import android.view.WindowManager;
 import com.google.android.setupcompat.lifecycle.LifecycleFragment;
+import com.google.android.setupcompat.logging.CustomEvent;
+import com.google.android.setupcompat.logging.MetricKey;
+import com.google.android.setupcompat.logging.SetupMetricsLogger;
 import com.google.android.setupcompat.template.ButtonFooterMixin;
 import com.google.android.setupcompat.template.StatusBarMixin;
 import com.google.android.setupcompat.template.SystemNavBarMixin;
@@ -39,6 +43,8 @@ import com.google.android.setupcompat.util.WizardManagerHelper;
 /** A templatization layout with consistent style used in Setup Wizard or app itself. */
 public class PartnerCustomizationLayout extends TemplateLayout {
 
+  private final boolean suwVersionSupportPartnerResource =
+      Build.VERSION.SDK_INT > VERSION_CODES.P;
   private Activity activity;
 
   public PartnerCustomizationLayout(Context context) {
@@ -69,37 +75,11 @@ public class PartnerCustomizationLayout extends TemplateLayout {
     activity = lookupActivityFromContext(getContext());
 
     boolean isSetupFlow = WizardManagerHelper.isAnySetupWizard(activity.getIntent());
-    registerMixin(
-        StatusBarMixin.class,
-        new StatusBarMixin(
-            this,
-            activity.getWindow(),
-            attrs,
-            defStyleAttr,
-            /* applyPartnerResources= */ isSetupFlow));
-    registerMixin(
-        SystemNavBarMixin.class,
-        new SystemNavBarMixin(
-            this,
-            activity.getWindow(),
-            attrs,
-            defStyleAttr,
-            /* applyPartnerResources= */ isSetupFlow));
 
     TypedArray a =
         getContext()
             .obtainStyledAttributes(
                 attrs, R.styleable.SucPartnerCustomizationLayout, defStyleAttr, 0);
-
-    final int primaryBtn =
-        a.getResourceId(R.styleable.SucPartnerCustomizationLayout_sucPrimaryFooterButton, 0);
-    final int secondaryBtn =
-        a.getResourceId(R.styleable.SucPartnerCustomizationLayout_sucSecondaryFooterButton, 0);
-
-    registerMixin(
-        ButtonFooterMixin.class,
-        new ButtonFooterMixin(
-            this, primaryBtn, secondaryBtn, /* applyPartnerResources= */ isSetupFlow));
 
     final int footer = a.getResourceId(R.styleable.SucPartnerCustomizationLayout_sucFooter, 0);
     if (footer != 0) {
@@ -108,11 +88,27 @@ public class PartnerCustomizationLayout extends TemplateLayout {
 
     boolean layoutFullscreen =
         a.getBoolean(R.styleable.SucPartnerCustomizationLayout_sucLayoutFullscreen, true);
+
+    boolean usePartnerResource =
+        a.getBoolean(R.styleable.SucPartnerCustomizationLayout_sucUsePartnerResource, true);
     a.recycle();
 
     if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP && layoutFullscreen) {
       setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
+
+    boolean applyPartnerResource =
+        suwVersionSupportPartnerResource && (isSetupFlow || usePartnerResource);
+    registerMixin(
+        StatusBarMixin.class,
+        new StatusBarMixin(this, activity.getWindow(), attrs, defStyleAttr, applyPartnerResource));
+    registerMixin(
+        SystemNavBarMixin.class,
+        new SystemNavBarMixin(
+            this, activity.getWindow(), attrs, defStyleAttr, applyPartnerResource));
+    registerMixin(
+        ButtonFooterMixin.class,
+        new ButtonFooterMixin(this, attrs, defStyleAttr, applyPartnerResource));
 
     // Override the FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS, FLAG_TRANSLUCENT_STATUS,
     // FLAG_TRANSLUCENT_NAVIGATION and SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN attributes of window forces
@@ -141,7 +137,25 @@ public class PartnerCustomizationLayout extends TemplateLayout {
   @Override
   protected void onAttachedToWindow() {
     super.onAttachedToWindow();
-    LifecycleFragment.attachNow(lookupActivityFromContext(getContext()));
+    LifecycleFragment.attachNow(activity);
+    getMixin(ButtonFooterMixin.class).onAttachedToWindow();
+  }
+
+  @Override
+  protected void onDetachedFromWindow() {
+    super.onDetachedFromWindow();
+    if (WizardManagerHelper.isAnySetupWizard(activity.getIntent())) {
+      ButtonFooterMixin buttonFooterMixin = getMixin(ButtonFooterMixin.class);
+      buttonFooterMixin.onDetachedFromWindow();
+      PersistableBundle persistableBundle = new PersistableBundle();
+      persistableBundle.putPersistableBundle(
+          "FooterButtonVisibilityMetrics", buttonFooterMixin.getLoggingMetrics());
+      SetupMetricsLogger.logCustomEvent(
+          getContext(),
+          CustomEvent.create(
+              MetricKey.get("SetupCompatMetrics", activity.getClass().getSimpleName()),
+              persistableBundle));
+    }
   }
 
   private static Activity lookupActivityFromContext(Context context) {

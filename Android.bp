@@ -1,0 +1,21 @@
+//
+// Build the setup compat library.
+//
+
+android_library {
+    name: "setupcompat",
+    manifest: "AndroidManifest.xml",
+    resource_dirs: [
+        "main/res",
+    ],
+    srcs: [
+        "main/java/**/*.java",
+        "main/aidl/**/*.aidl",
+    ],
+    static_libs: [
+        "androidx.annotation_annotation",
+        "androidx.core_core",
+        "guava",
+    ],
+    min_sdk_version: "14",
+}

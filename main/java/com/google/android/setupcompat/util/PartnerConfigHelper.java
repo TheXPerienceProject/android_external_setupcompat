@@ -20,6 +20,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.content.res.Resources.NotFoundException;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
@@ -30,6 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import android.util.Log;
+import android.util.TypedValue;
 import com.google.android.setupcompat.util.PartnerConfig.ResourceType;
 import java.util.EnumMap;
 
@@ -117,13 +119,23 @@ public class PartnerConfigHelper {
     try {
       ResourceEntry resourceEntry = getResourceEntryFromKey(resourceConfig.getResourceName());
       Resources resource = getResourcesByPackageName(context, resourceEntry.getPackageName());
+
+      // for @null
+      TypedValue outValue = new TypedValue();
+      resource.getValue(resourceEntry.getResourceId(), outValue, true);
+      if (outValue.type == TypedValue.TYPE_REFERENCE && outValue.data == 0) {
+        return result;
+      }
+
       if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
         result = resource.getDrawable(resourceEntry.getResourceId(), null);
       } else {
         result = resource.getDrawable(resourceEntry.getResourceId());
       }
       partnerResourceCache.put(resourceConfig, result);
-    } catch (PackageManager.NameNotFoundException | NullPointerException exception) {
+    } catch (PackageManager.NameNotFoundException
+        | NullPointerException
+        | NotFoundException exception) {
       // fall through
     }
     return result;

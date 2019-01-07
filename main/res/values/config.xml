@@ -20,11 +20,4 @@
   <!-- ID used with View#setTag to store the original weight on a ButtonBar -->
   <item name="suc_customization_original_weight" type="id" />
 
-  <!-- Footer button id -->
-  <item name="suc_customization_primary_button" type="id" />
-  <item name="suc_customization_secondary_button" type="id" />
-
-  <!-- Footer button typeface -->
-  <string name="suc_customization_button_font_family" translatable="false">google-sans-medium</string>
-
 </resources>
