@@ -19,11 +19,12 @@ package com.google.android.setupcompat.util;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.provider.Settings;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import com.google.android.setupcompat.internal.BuildCompat;
 import java.util.Arrays;
 
 /**
@@ -196,15 +197,17 @@ public class WizardManagerHelper {
    * @param originalIntent The original intent that was used to start the step, usually via {@link
    *     Activity#getIntent()}.
    */
-  public static boolean isAnySetupWizard(Intent originalIntent) {
-    // TODO(b/119455685): change this to >= VERSION_CODES.Q when VERSION_CODES.Q is available
-    if (Build.VERSION.SDK_INT > VERSION_CODES.P) {
+  public static boolean isAnySetupWizard(@Nullable Intent originalIntent) {
+    if (originalIntent == null) {
+      return false;
+    }
+
+    if (BuildCompat.isAtLeastQ()) {
       return originalIntent.getBooleanExtra(EXTRA_IS_SETUP_FLOW, false);
     } else {
-      return originalIntent != null
-          && (isSetupWizardIntent(originalIntent)
-              || isPreDeferredSetupWizard(originalIntent)
-              || isDeferredSetupWizard(originalIntent));
+      return isSetupWizardIntent(originalIntent)
+          || isPreDeferredSetupWizard(originalIntent)
+          || isDeferredSetupWizard(originalIntent);
     }
   }
 }

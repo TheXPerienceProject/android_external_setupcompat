@@ -50,7 +50,10 @@ import android.view.ViewStub;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
+import com.google.android.setupcompat.PartnerCustomizationLayout;
 import com.google.android.setupcompat.R;
+import com.google.android.setupcompat.internal.BuildCompat;
+import com.google.android.setupcompat.internal.Preconditions;
 import com.google.android.setupcompat.internal.TemplateLayout;
 import com.google.android.setupcompat.logging.internal.FooterBarMixinMetrics;
 import com.google.android.setupcompat.partnerconfig.PartnerConfig;
@@ -76,6 +79,8 @@ public class FooterBarMixin implements Mixin {
   private FooterButton secondaryButton;
   @IdRes private int primaryButtonId;
   @IdRes private int secondaryButtonId;
+  ColorStateList primaryTextColorStateList = null;
+  ColorStateList secondaryTextColorStateList = null;
 
   private int footerBarPaddingTop;
   private int footerBarPaddingBottom;
@@ -84,6 +89,7 @@ public class FooterBarMixin implements Mixin {
   @ColorInt private final int footerBarSecondaryBackgroundColor;
   private boolean removeFooterBarWhenEmpty = true;
 
+  private static final float DEFAULT_DISABLED_ALPHA = 0.26f;
   private static final AtomicInteger nextGeneratedId = new AtomicInteger(1);
 
   @VisibleForTesting public final FooterBarMixinMetrics metrics = new FooterBarMixinMetrics();
@@ -98,6 +104,9 @@ public class FooterBarMixin implements Mixin {
           Button button = buttonContainer.findViewById(id);
           if (button != null) {
             button.setEnabled(enabled);
+            if (applyPartnerResources && !enabled) {
+              updateButtonTextColorWithPartnerConfig(button, id == primaryButtonId);
+            }
           }
         }
       }
@@ -131,16 +140,14 @@ public class FooterBarMixin implements Mixin {
    * @param layout The {@link TemplateLayout} containing this mixin.
    * @param attrs XML attributes given to the layout.
    * @param defStyleAttr The default style attribute as given to the constructor of the layout.
-   * @param applyPartnerResources determine applies partner resources or not.
    */
   public FooterBarMixin(
-      TemplateLayout layout,
-      @Nullable AttributeSet attrs,
-      @AttrRes int defStyleAttr,
-      boolean applyPartnerResources) {
+      TemplateLayout layout, @Nullable AttributeSet attrs, @AttrRes int defStyleAttr) {
     context = layout.getContext();
-    footerStub = (ViewStub) layout.findManagedViewById(R.id.suc_layout_footer);
-    this.applyPartnerResources = applyPartnerResources;
+    footerStub = layout.findManagedViewById(R.id.suc_layout_footer);
+    this.applyPartnerResources =
+        layout instanceof PartnerCustomizationLayout
+            && ((PartnerCustomizationLayout) layout).shouldApplyPartnerResource();
 
     TypedArray a =
         context.obtainStyledAttributes(attrs, R.styleable.SucFooterBarMixin, defStyleAttr, 0);
@@ -226,7 +233,7 @@ public class FooterBarMixin implements Mixin {
     if (footerButton.getTheme() == 0 || applyPartnerResources) {
       footerButton.setTheme(R.style.SucPartnerCustomizationButton_Primary);
     }
-    // TODO(b/120055778): Make sure customize attributes in theme can be applied during setup flow.
+    // TODO: Make sure customize attributes in theme can be applied during setup flow.
     // If sets background color to full transparent, the button changes to colored borderless ink
     // button style.
     if (applyPartnerResources
@@ -249,7 +256,7 @@ public class FooterBarMixin implements Mixin {
       if (footerBarPrimaryBackgroundColor != 0) {
         updateButtonBackground(button, footerBarPrimaryBackgroundColor);
       } else {
-        // TODO(b/122509325): get button background color from activity theme
+        // TODO: get button background color from activity theme
       }
     }
 
@@ -287,7 +294,7 @@ public class FooterBarMixin implements Mixin {
     int color =
         PartnerConfigHelper.get(context)
             .getColor(context, PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_BG_COLOR);
-    // TODO(b/120055778): Make sure customize attributes in theme can be applied during setup flow.
+    // TODO: Make sure customize attributes in theme can be applied during setup flow.
     // If doesn't set background color to full transparent or white, the button changes to colored
     // bordered ink button style.
     if (applyPartnerResources && (color != Color.TRANSPARENT && color != Color.WHITE)) {
@@ -306,7 +313,7 @@ public class FooterBarMixin implements Mixin {
       if (footerBarSecondaryBackgroundColor != 0) {
         updateButtonBackground(button, footerBarSecondaryBackgroundColor);
       } else {
-        // TODO(b/122509325): get button background color from activity theme
+        // TODO: get button background color from activity theme
       }
     }
 
@@ -421,7 +428,8 @@ public class FooterBarMixin implements Mixin {
     return button;
   }
 
-  // TODO(b/120055778): Make sure customize attributes in theme can be applied during setup flow.
+  // TODO: Make sure customize attributes in theme can be applied during setup flow.
+  @TargetApi(VERSION_CODES.Q)
   private void updateButtonAttrsWithPartnerConfig(
       Button button, boolean isPrimaryButton, @ButtonType int buttonType) {
     updateButtonTextColorWithPartnerConfig(button, isPrimaryButton);
@@ -439,12 +447,24 @@ public class FooterBarMixin implements Mixin {
       color =
           PartnerConfigHelper.get(context)
               .getColor(context, PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR);
+      if (primaryTextColorStateList == null) {
+        primaryTextColorStateList = button.getTextColors();
+      }
     } else {
       color =
           PartnerConfigHelper.get(context)
               .getColor(context, PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_TEXT_COLOR);
+      if (secondaryTextColorStateList == null) {
+        secondaryTextColorStateList = button.getTextColors();
+      }
     }
-    button.setTextColor(color);
+
+    if (button.isEnabled()) {
+      button.setTextColor(ColorStateList.valueOf(color));
+    } else {
+      button.setTextColor(
+          isPrimaryButton ? primaryTextColorStateList : secondaryTextColorStateList);
+    }
   }
 
   private void updateButtonTextSizeWithPartnerConfig(Button button) {
@@ -466,26 +486,48 @@ public class FooterBarMixin implements Mixin {
     }
   }
 
+  @TargetApi(VERSION_CODES.Q)
   private void updateButtonBackgroundWithPartnerConfig(Button button, boolean isPrimaryButton) {
+    Preconditions.checkArgument(
+        BuildCompat.isAtLeastQ(), "Update button background only support on sdk Q or higher");
+    @ColorInt int color;
+    int[] DISABLED_STATE_SET = {-android.R.attr.state_enabled};
+    int[] ENABLED_STATE_SET = {};
     if (isPrimaryButton) {
-      int color =
+      color =
           PartnerConfigHelper.get(context)
               .getColor(context, PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_BG_COLOR);
-      if (color != Color.TRANSPARENT) {
-        button.getBackground().setColorFilter(color, Mode.MULTIPLY);
-      }
     } else {
-      int color =
+      color =
           PartnerConfigHelper.get(context)
               .getColor(context, PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_BG_COLOR);
-      if (color != Color.TRANSPARENT) {
-        button.getBackground().setColorFilter(color, Mode.MULTIPLY);
-      }
+    }
+
+    if (color != Color.TRANSPARENT) {
+      TypedArray a = context.obtainStyledAttributes(new int[] {android.R.attr.disabledAlpha});
+      float alpha = a.getFloat(0, DEFAULT_DISABLED_ALPHA);
+      a.recycle();
+
+      // Set text color for ripple.
+      ColorStateList colorStateList =
+          new ColorStateList(
+              new int[][] {DISABLED_STATE_SET, ENABLED_STATE_SET},
+              new int[] {convertRgbToArgb(color, alpha), color});
+
+      // b/129482013: When a LayerDrawable is mutated, a new clone of its children drawables are
+      // created, but without copying the state from the parent drawable. So even though the
+      // parent is getting the correct drawable state from the view, the children won't get those
+      // states until a state change happens.
+      // As a workaround, we mutate the drawable and forcibly set the state to empty, and then
+      // refresh the state so the children will have the updated states.
+      button.getBackground().mutate().setState(new int[0]);
+      button.refreshDrawableState();
+      button.setBackgroundTintList(colorStateList);
     }
   }
 
   private void updateButtonBackground(Button button, @ColorInt int color) {
-    button.getBackground().setColorFilter(color, Mode.SRC_ATOP);
+    button.getBackground().mutate().setColorFilter(color, Mode.SRC_ATOP);
   }
 
   private void updateButtonRadiusWithPartnerConfig(Button button) {
@@ -501,35 +543,39 @@ public class FooterBarMixin implements Mixin {
   }
 
   private void updateButtonRippleColorWithPartnerConfig(Button button, boolean isPrimaryButton) {
-    RippleDrawable rippleDrawable = getRippleDrawable(button);
-    if (rippleDrawable == null) {
-      return;
-    }
+    // RippleDrawable is available after sdk 21. And because on lower sdk the RippleDrawable is
+    // unavailable. Since Stencil customization provider only works on Q+, there is no need to
+    // perform any customization for versions 21.
+    if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
+      RippleDrawable rippleDrawable = getRippleDrawable(button);
+      if (rippleDrawable == null) {
+        return;
+      }
 
-    int[] pressedState = {android.R.attr.state_pressed};
+      int[] pressedState = {android.R.attr.state_pressed};
+      @ColorInt int color;
+      // Get partner text color.
+      if (isPrimaryButton) {
+        color =
+            PartnerConfigHelper.get(context)
+                .getColor(context, PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR);
+      } else {
+        color =
+            PartnerConfigHelper.get(context)
+                .getColor(context, PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_TEXT_COLOR);
+      }
 
-    @ColorInt int color;
-    // Get partner text color.
-    if (isPrimaryButton) {
-      color =
+      float alpha =
           PartnerConfigHelper.get(context)
-              .getColor(context, PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR);
-    } else {
-      color =
-          PartnerConfigHelper.get(context)
-              .getColor(context, PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_TEXT_COLOR);
+              .getFraction(context, PartnerConfig.CONFIG_FOOTER_BUTTON_RIPPLE_COLOR_ALPHA);
+
+      // Set text color for ripple.
+      ColorStateList colorStateList =
+          new ColorStateList(
+              new int[][] {pressedState, StateSet.NOTHING},
+              new int[] {convertRgbToArgb(color, alpha), Color.TRANSPARENT});
+      rippleDrawable.setColor(colorStateList);
     }
-
-    float alpha =
-        PartnerConfigHelper.get(context)
-            .getFraction(context, PartnerConfig.CONFIG_FOOTER_BUTTON_RIPPLE_COLOR_ALPHA);
-
-    // Set text color for ripple.
-    ColorStateList colorStateList =
-        new ColorStateList(
-            new int[][] {pressedState, StateSet.NOTHING},
-            new int[] {convertRgbToArgb(color, alpha), Color.TRANSPARENT});
-    rippleDrawable.setColor(colorStateList);
   }
 
   private void updateButtonIconWithPartnerConfig(Button button, @ButtonType int buttonType) {
@@ -550,7 +596,7 @@ public class FooterBarMixin implements Mixin {
     }
 
     if (icon != null) {
-      // TODO(b/120488979): restrict the icons to a reasonable size
+      // TODO: restrict the icons to a reasonable size
       int h = icon.getIntrinsicHeight();
       int w = icon.getIntrinsicWidth();
       icon.setBounds(0, 0, w, h);
@@ -606,23 +652,33 @@ public class FooterBarMixin implements Mixin {
   }
 
   GradientDrawable getGradientDrawable(Button button) {
-    Drawable drawable = button.getBackground();
-    if (drawable instanceof InsetDrawable) {
-      LayerDrawable layerDrawable = (LayerDrawable) ((InsetDrawable) drawable).getDrawable();
-      return (GradientDrawable) layerDrawable.getDrawable(0);
-    } else if (drawable instanceof RippleDrawable) {
-      InsetDrawable insetDrawable = (InsetDrawable) ((RippleDrawable) drawable).getDrawable(0);
-      return (GradientDrawable) insetDrawable.getDrawable();
+    // RippleDrawable is available after sdk 21, InsetDrawable#getDrawable is available after
+    // sdk 19. So check the sdk is higher than sdk 21 and since Stencil customization provider only
+    // works on Q+, there is no need to perform any customization for versions 21.
+    if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
+      Drawable drawable = button.getBackground();
+      if (drawable instanceof InsetDrawable) {
+        LayerDrawable layerDrawable = (LayerDrawable) ((InsetDrawable) drawable).getDrawable();
+        return (GradientDrawable) layerDrawable.getDrawable(0);
+      } else if (drawable instanceof RippleDrawable) {
+        InsetDrawable insetDrawable = (InsetDrawable) ((RippleDrawable) drawable).getDrawable(0);
+        return (GradientDrawable) insetDrawable.getDrawable();
+      }
     }
     return null;
   }
 
   RippleDrawable getRippleDrawable(Button button) {
-    Drawable drawable = button.getBackground();
-    if (drawable instanceof InsetDrawable) {
-      return (RippleDrawable) ((InsetDrawable) drawable).getDrawable();
-    } else if (drawable instanceof RippleDrawable) {
-      return (RippleDrawable) drawable;
+    // RippleDrawable is available after sdk 21. And because on lower sdk the RippleDrawable is
+    // unavailable. Since Stencil customization provider only works on Q+, there is no need to
+    // perform any customization for versions 21.
+    if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
+      Drawable drawable = button.getBackground();
+      if (drawable instanceof InsetDrawable) {
+        return (RippleDrawable) ((InsetDrawable) drawable).getDrawable();
+      } else if (drawable instanceof RippleDrawable) {
+        return (RippleDrawable) drawable;
+      }
     }
     return null;
   }
