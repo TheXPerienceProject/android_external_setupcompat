@@ -19,12 +19,12 @@ package com.google.android.setupcompat.util;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.provider.Settings;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import com.google.android.setupcompat.internal.BuildCompat;
 import java.util.Arrays;
 
 /**
@@ -113,12 +113,8 @@ public class WizardManagerHelper {
     }
   }
 
-  /**
-   * Checks whether an intent is intended to be used within the setup wizard flow.
-   *
-   * @param intent The intent to be checked, usually from {@link Activity#getIntent()}.
-   * @return true if the intent passed in was intended to be used with setup wizard.
-   */
+  /** @deprecated Use {@link isInitialSetupWizard} instead. */
+  @Deprecated
   public static boolean isSetupWizardIntent(Intent intent) {
     return intent.getBooleanExtra(EXTRA_IS_FIRST_RUN, false);
   }
@@ -191,6 +187,16 @@ public class WizardManagerHelper {
   }
 
   /**
+   * Checks whether an intent is is running in the initial setup wizard flow.
+   *
+   * @param intent The intent to be checked, usually from {@link Activity#getIntent()}.
+   * @return true if the intent passed in was intended to be used with setup wizard.
+   */
+  public static boolean isInitialSetupWizard(Intent intent) {
+    return intent.getBooleanExtra(EXTRA_IS_FIRST_RUN, false);
+  }
+
+  /**
    * Returns true if the intent passed in indicates that it is running in any setup wizard flow,
    * including initial setup and deferred setup etc.
    *
@@ -202,10 +208,10 @@ public class WizardManagerHelper {
       return false;
     }
 
-    if (BuildCompat.isAtLeastQ()) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       return originalIntent.getBooleanExtra(EXTRA_IS_SETUP_FLOW, false);
     } else {
-      return isSetupWizardIntent(originalIntent)
+      return isInitialSetupWizard(originalIntent)
           || isPreDeferredSetupWizard(originalIntent)
           || isDeferredSetupWizard(originalIntent);
     }
