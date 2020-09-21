@@ -20,8 +20,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.RemoteException;
-import androidx.annotation.VisibleForTesting;
 import android.util.Log;
+import androidx.annotation.VisibleForTesting;
 import com.google.android.setupcompat.ISetupCompatService;
 import com.google.android.setupcompat.logging.internal.SetupMetricsLoggingConstants.MetricType;
 import java.util.concurrent.ExecutorService;
@@ -68,7 +68,7 @@ public class SetupCompatServiceInvoker {
       } else {
         Log.w(TAG, "logMetric failed since service reference is null. Are the permissions valid?");
       }
-    } catch (InterruptedException | TimeoutException | RemoteException e) {
+    } catch (InterruptedException | TimeoutException | RemoteException | IllegalStateException e) {
       Log.e(TAG, String.format("Exception occurred while trying to log metric = [%s]", args), e);
     }
   }
