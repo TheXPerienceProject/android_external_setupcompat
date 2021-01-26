@@ -74,6 +74,8 @@
             <enum name="skip" value="7" />
             <enum name="stop" value="8" />
         </attr>
+        <attr name="sucFooterButtonPaddingStart" format="dimension" />
+        <attr name="sucFooterButtonPaddingEnd" format="dimension" />
     </declare-styleable>
 
     <!-- Button of footer attributes -->
@@ -93,20 +95,16 @@
         <attr name="sucFooterBarPaddingVertical" format="dimension" />
         <attr name="sucFooterBarPaddingStart" format="dimension" />
         <attr name="sucFooterBarPaddingEnd" format="dimension" />
+        <attr name="sucFooterBarMinHeight" format="dimension" />
     </declare-styleable>
 
     <declare-styleable name="SucHeaderMixin">
         <attr name="sucHeaderText" format="string" localization="suggested" />
         <attr name="sucHeaderTextColor" format="reference|color" />
-        <attr name="sucGlifIconMarginTop" format="dimension" />
         <attr name="sucGlifHeaderMarginTop" format="dimension" />
         <attr name="sucGlifHeaderMarginBottom" format="dimension" />
+        <attr name="sucGlifIconMarginTop" format="dimension" />
+        <attr name="sucHeaderContainerMarginBottom" format="dimension" />
     </declare-styleable>
 
-    <declare-styleable name="SucSubtitleMixin">
-        <attr name="sucSubtitleText" format="string" localization="suggested" />
-        <attr name="sucSubtitleTextColor" format="reference|color" />
-        <attr name="sucGlifSubtitleMarginTop" format="dimension" />
-        <attr name="sucGlifSubtitleMarginBottom" format="dimension" />
-    </declare-styleable>
 </resources>
