@@ -66,7 +66,7 @@ public class PartnerConfigHelper {
 
   @VisibleForTesting public static Bundle applyExtendedPartnerConfigBundle = null;
 
-  @VisibleForTesting static Bundle applyDynamicColorBundle = null;
+  @VisibleForTesting public static Bundle applyDynamicColorBundle = null;
 
   private static PartnerConfigHelper instance = null;
 
@@ -158,6 +158,13 @@ public class PartnerConfigHelper {
           getResourceEntryFromKey(context, resourceConfig.getResourceName());
       Resources resource = resourceEntry.getResources();
       int resId = resourceEntry.getResourceId();
+
+      // for @null
+      TypedValue outValue = new TypedValue();
+      resource.getValue(resId, outValue, true);
+      if (outValue.type == TypedValue.TYPE_REFERENCE && outValue.data == 0) {
+        return result;
+      }
 
       if (Build.VERSION.SDK_INT >= VERSION_CODES.M) {
         result = resource.getColor(resId, null);
@@ -600,7 +607,7 @@ public class PartnerConfigHelper {
   }
 
   /** Returns true if the SetupWizard supports the dynamic color during setup flow. */
-  public static boolean shouldApplyDynamicColor(@NonNull Context context) {
+  public static boolean isSetupWizardDynamicColorEnabled(@NonNull Context context) {
     if (applyDynamicColorBundle == null) {
       try {
         applyDynamicColorBundle =
