@@ -103,8 +103,8 @@ public class FooterBarMixin implements Mixin {
           Button button = buttonContainer.findViewById(id);
           if (button != null) {
             button.setEnabled(enabled);
-            if (applyPartnerResources) {
-              updateButtonTextColorWithPartnerConfig(
+            if (applyPartnerResources && !applyDynamicColor) {
+              updateButtonTextColorWithEnabledState(
                   button,
                   (id == primaryButtonId || isSecondaryButtonInPrimaryStyle)
                       ? PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR
@@ -358,6 +358,10 @@ public class FooterBarMixin implements Mixin {
 
     onFooterButtonInflated(button, footerBarPrimaryBackgroundColor);
     onFooterButtonApplyPartnerResource(button, footerButtonPartnerConfig);
+    // Sets the primary button background to a light accent color
+    if (applyDynamicColor) {
+      FooterButtonStyleUtils.applyDynamicColorOnPrimaryButton(context, button);
+    }
 
     // Make sure the position of buttons are correctly and prevent primary button create twice or
     // more.
@@ -608,41 +612,20 @@ public class FooterBarMixin implements Mixin {
     if (!applyPartnerResources) {
       return;
     }
-
-    // If dynamic color enabled, these colors won't be overrode by partner config.
-    // Instead, these colors align with the current theme colors.
+    FooterButtonStyleUtils.applyButtonPartnerResources(
+        context,
+        button,
+        applyDynamicColor,
+        /* isButtonIconAtEnd= */ (button.getId() == primaryButtonId),
+        footerButtonPartnerConfig);
     if (!applyDynamicColor) {
-      updateButtonTextColorWithPartnerConfig(
+      // adjust text color based on enabled state
+      updateButtonTextColorWithEnabledState(
           button, footerButtonPartnerConfig.getButtonTextColorConfig());
-      FooterButtonStyleUtils.updateButtonBackgroundWithPartnerConfig(
-          context,
-          button,
-          footerButtonPartnerConfig.getButtonBackgroundConfig(),
-          footerButtonPartnerConfig.getButtonDisableAlphaConfig(),
-          footerButtonPartnerConfig.getButtonDisableBackgroundConfig());
-      FooterButtonStyleUtils.updateButtonRippleColorWithPartnerConfig(
-          context, button, footerButtonPartnerConfig);
     }
-
-    FooterButtonStyleUtils.updateButtonTextSizeWithPartnerConfig(
-        context, button, footerButtonPartnerConfig.getButtonTextSizeConfig());
-    FooterButtonStyleUtils.updateButtonMinHeightWithPartnerConfig(
-        context, button, footerButtonPartnerConfig.getButtonMinHeightConfig());
-    FooterButtonStyleUtils.updateButtonTypeFaceWithPartnerConfig(
-        context,
-        button,
-        footerButtonPartnerConfig.getButtonTextTypeFaceConfig(),
-        footerButtonPartnerConfig.getButtonTextStyleConfig());
-    FooterButtonStyleUtils.updateButtonRadiusWithPartnerConfig(
-        context, button, footerButtonPartnerConfig.getButtonRadiusConfig());
-    FooterButtonStyleUtils.updateButtonIconWithPartnerConfig(
-        context,
-        button,
-        footerButtonPartnerConfig.getButtonIconConfig(),
-        primaryButtonId == button.getId());
   }
 
-  private void updateButtonTextColorWithPartnerConfig(
+  private void updateButtonTextColorWithEnabledState(
       Button button, PartnerConfig buttonTextColorConfig) {
     if (button.isEnabled()) {
       FooterButtonStyleUtils.updateButtonTextEnabledColorWithPartnerConfig(
