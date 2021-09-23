@@ -29,6 +29,7 @@ import android.os.Build.VERSION_CODES;
 import android.os.PersistableBundle;
 import android.util.AttributeSet;
 import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewStub;
@@ -71,7 +72,7 @@ public class FooterBarMixin implements Mixin {
   @VisibleForTesting final boolean applyDynamicColor;
   @VisibleForTesting final boolean useFullDynamicColor;
 
-  private LinearLayout buttonContainer;
+  @VisibleForTesting LinearLayout buttonContainer;
   private FooterButton primaryButton;
   private FooterButton secondaryButton;
   @IdRes private int primaryButtonId;
@@ -83,6 +84,8 @@ public class FooterBarMixin implements Mixin {
 
   private int footerBarPaddingTop;
   private int footerBarPaddingBottom;
+  @VisibleForTesting int footerBarPaddingStart;
+  @VisibleForTesting int footerBarPaddingEnd;
   @VisibleForTesting int defaultPadding;
   @ColorInt private final int footerBarPrimaryBackgroundColor;
   @ColorInt private final int footerBarSecondaryBackgroundColor;
@@ -189,6 +192,10 @@ public class FooterBarMixin implements Mixin {
     footerBarPaddingBottom =
         a.getDimensionPixelSize(
             R.styleable.SucFooterBarMixin_sucFooterBarPaddingBottom, defaultPadding);
+    footerBarPaddingStart =
+        a.getDimensionPixelSize(R.styleable.SucFooterBarMixin_sucFooterBarPaddingStart, 0);
+    footerBarPaddingEnd =
+        a.getDimensionPixelSize(R.styleable.SucFooterBarMixin_sucFooterBarPaddingEnd, 0);
     footerBarPrimaryBackgroundColor =
         a.getColor(R.styleable.SucFooterBarMixin_sucFooterBarPrimaryFooterBackground, 0);
     footerBarSecondaryBackgroundColor =
@@ -214,8 +221,21 @@ public class FooterBarMixin implements Mixin {
     }
   }
 
+  private boolean isFooterButtonAlignedEnd(Context context) {
+    if (PartnerConfigHelper.get(context)
+        .isPartnerConfigAvailable(PartnerConfig.CONFIG_FOOTER_BUTTON_ALIGNED_END)) {
+      return PartnerConfigHelper.get(context)
+          .getBoolean(context, PartnerConfig.CONFIG_FOOTER_BUTTON_ALIGNED_END, false);
+    } else {
+      return false;
+    }
+  }
+
   private View addSpace() {
     LinearLayout buttonContainer = ensureFooterInflated();
+    if (isFooterButtonAlignedEnd(buttonContainer.getContext())) {
+      return null;
+    }
     View space = new View(buttonContainer.getContext());
     space.setLayoutParams(new LayoutParams(0, 0, 1.0f));
     space.setVisibility(View.INVISIBLE);
@@ -253,10 +273,13 @@ public class FooterBarMixin implements Mixin {
     }
     updateFooterBarPadding(
         buttonContainer,
-        buttonContainer.getPaddingLeft(),
+        footerBarPaddingStart,
         footerBarPaddingTop,
-        buttonContainer.getPaddingRight(),
+        footerBarPaddingEnd,
         footerBarPaddingBottom);
+    if (isFooterButtonAlignedEnd(buttonContainer.getContext())) {
+      buttonContainer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+    }
   }
 
   /**
@@ -282,19 +305,39 @@ public class FooterBarMixin implements Mixin {
       buttonContainer.setBackgroundColor(color);
     }
 
-    footerBarPaddingTop =
-        (int)
-            PartnerConfigHelper.get(context)
-                .getDimension(context, PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_TOP);
-    footerBarPaddingBottom =
-        (int)
-            PartnerConfigHelper.get(context)
-                .getDimension(context, PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_BOTTOM);
+    if (PartnerConfigHelper.get(context)
+        .isPartnerConfigAvailable(PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_TOP)) {
+      footerBarPaddingTop =
+          (int)
+              PartnerConfigHelper.get(context)
+                  .getDimension(context, PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_TOP);
+    }
+    if (PartnerConfigHelper.get(context)
+        .isPartnerConfigAvailable(PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_BOTTOM)) {
+      footerBarPaddingBottom =
+          (int)
+              PartnerConfigHelper.get(context)
+                  .getDimension(context, PartnerConfig.CONFIG_FOOTER_BUTTON_PADDING_BOTTOM);
+    }
+    if (PartnerConfigHelper.get(context)
+        .isPartnerConfigAvailable(PartnerConfig.CONFIG_FOOTER_BAR_PADDING_START)) {
+      footerBarPaddingStart =
+          (int)
+              PartnerConfigHelper.get(context)
+                  .getDimension(context, PartnerConfig.CONFIG_FOOTER_BAR_PADDING_START);
+    }
+    if (PartnerConfigHelper.get(context)
+        .isPartnerConfigAvailable(PartnerConfig.CONFIG_FOOTER_BAR_PADDING_END)) {
+      footerBarPaddingEnd =
+          (int)
+              PartnerConfigHelper.get(context)
+                  .getDimension(context, PartnerConfig.CONFIG_FOOTER_BAR_PADDING_END);
+    }
     updateFooterBarPadding(
         buttonContainer,
-        buttonContainer.getPaddingLeft(),
+        footerBarPaddingStart,
         footerBarPaddingTop,
-        buttonContainer.getPaddingRight(),
+        footerBarPaddingEnd,
         footerBarPaddingBottom);
 
     if (PartnerConfigHelper.get(context)
@@ -343,6 +386,7 @@ public class FooterBarMixin implements Mixin {
             .setButtonRadiusConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_RADIUS)
             .setButtonRippleColorAlphaConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_RIPPLE_COLOR_ALPHA)
             .setTextColorConfig(PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR)
+            .setMarginStartConfig(PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_MARGIN_START)
             .setTextSizeConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_TEXT_SIZE)
             .setButtonMinHeight(PartnerConfig.CONFIG_FOOTER_BUTTON_MIN_HEIGHT)
             .setTextTypeFaceConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_FONT_FAMILY)
@@ -417,6 +461,7 @@ public class FooterBarMixin implements Mixin {
                 usePrimaryStyle
                     ? PartnerConfig.CONFIG_FOOTER_PRIMARY_BUTTON_TEXT_COLOR
                     : PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_TEXT_COLOR)
+            .setMarginStartConfig(PartnerConfig.CONFIG_FOOTER_SECONDARY_BUTTON_MARGIN_START)
             .setTextSizeConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_TEXT_SIZE)
             .setButtonMinHeight(PartnerConfig.CONFIG_FOOTER_BUTTON_MIN_HEIGHT)
             .setTextTypeFaceConfig(PartnerConfig.CONFIG_FOOTER_BUTTON_FONT_FAMILY)
