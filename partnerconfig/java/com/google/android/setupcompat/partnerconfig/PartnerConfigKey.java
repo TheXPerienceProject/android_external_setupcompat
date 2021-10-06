@@ -80,6 +80,7 @@ import java.lang.annotation.RetentionPolicy;
   PartnerConfigKey.KEY_DESCRIPTION_TEXT_COLOR,
   PartnerConfigKey.KEY_DESCRIPTION_LINK_TEXT_COLOR,
   PartnerConfigKey.KEY_DESCRIPTION_FONT_FAMILY,
+  PartnerConfigKey.KEY_DESCRIPTION_LINK_FONT_FAMILY,
   PartnerConfigKey.KEY_DESCRIPTION_TEXT_MARGIN_TOP,
   PartnerConfigKey.KEY_DESCRIPTION_TEXT_MARGIN_BOTTOM,
   PartnerConfigKey.KEY_CONTENT_TEXT_SIZE,
@@ -133,6 +134,8 @@ import java.lang.annotation.RetentionPolicy;
   PartnerConfigKey.KEY_LOADING_LAYOUT_CONTENT_PADDING_END,
   PartnerConfigKey.KEY_LOADING_LAYOUT_CONTENT_PADDING_BOTTOM,
   PartnerConfigKey.KEY_LOADING_LAYOUT_HEADER_HEIGHT,
+  PartnerConfigKey.KEY_PROGRESS_BAR_MARGIN_TOP,
+  PartnerConfigKey.KEY_PROGRESS_BAR_MARGIN_BOTTOM,
 })
 // TODO: can be removed and always reference PartnerConfig.getResourceName()?
 @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
@@ -310,6 +313,9 @@ public @interface PartnerConfigKey {
 
   // Font family of the description
   String KEY_DESCRIPTION_FONT_FAMILY = "setup_design_description_font_family";
+
+  // Font family of the link text
+  String KEY_DESCRIPTION_LINK_FONT_FAMILY = "setup_design_description_link_font_family";
 
   // Margin top of the header text
   String KEY_DESCRIPTION_TEXT_MARGIN_TOP = "setup_design_description_text_margin_top";
@@ -495,4 +501,10 @@ public @interface PartnerConfigKey {
 
   // A height of the header of loading layout.
   String KEY_LOADING_LAYOUT_HEADER_HEIGHT = "loading_layout_header_height";
+
+  // A margin top of the content frame of progress bar.
+  String KEY_PROGRESS_BAR_MARGIN_TOP = "setup_design_progress_bar_margin_top";
+
+  // A margin bottom of the content frame of progress bar.
+  String KEY_PROGRESS_BAR_MARGIN_BOTTOM = "setup_design_progress_bar_margin_bottom";
 }
