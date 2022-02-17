@@ -61,22 +61,22 @@ public final class BuildCompatUtils {
    *
    * <ul>
    *   <li>For current Android release: while new API is not finalized yet (CODENAME = "T", SDK_INT
-   *       = 31|32)
+   *       = 33)
    *   <li>For current Android release: when new API is finalized (CODENAME = "REL", SDK_INT = 32)
-   *   <li>For next Android release (CODENAME = "U", SDK_INT = 33+)
+   *   <li>For next Android release (CODENAME = "U", SDK_INT = 34+)
    * </ul>
    *
-   * <p>Note that Build.VERSION_CODES.S cannot be used here until final SDK is available in all
-   * Google3 channels, because it is equal to Build.VERSION_CODES.CUR_DEVELOPMENT before API
+   * <p>Note that Build.VERSION_CODES.T cannot be used here until final SDK is available in all
+   * channels, because it is equal to Build.VERSION_CODES.CUR_DEVELOPMENT before API
    * finalization.
    *
-   * @return Whether the current OS version is higher or equal to S.
+   * @return Whether the current OS version is higher or equal to T.
    */
   public static boolean isAtLeastT() {
     if (!isAtLeastS()) {
       return false;
     }
-    return (Build.VERSION.CODENAME.equals("REL") && Build.VERSION.SDK_INT >= 32)
+    return (Build.VERSION.CODENAME.equals("REL") && Build.VERSION.SDK_INT >= 33)
         || (Build.VERSION.CODENAME.length() == 1
             && Build.VERSION.CODENAME.charAt(0) >= 'T'
             && Build.VERSION.CODENAME.charAt(0) <= 'Z');
