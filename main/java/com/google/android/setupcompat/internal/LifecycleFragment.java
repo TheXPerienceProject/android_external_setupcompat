@@ -47,7 +47,7 @@ public class LifecycleFragment extends Fragment {
 
   /** Interface for listening to lifecycle changes of the fragment. */
   public interface OnFragmentLifecycleChangeListener {
-    void onStop();
+    void onStop(PersistableBundle bundle);
   }
 
   /**
@@ -105,6 +105,8 @@ public class LifecycleFragment extends Fragment {
         }
       }
     }
+    LOG.atDebug(
+        "Skip attach " + activity.getClass().getSimpleName() + " because it's not in SUW flow.");
     return null;
   }
 
@@ -135,8 +137,12 @@ public class LifecycleFragment extends Fragment {
   @Override
   public void onResume() {
     super.onResume();
-    LOG.atDebug("onResume host=" + getActivity().getClass().getSimpleName());
     startInNanos = ClockProvider.timeInNanos();
+    LOG.atDebug(
+        "onResume host="
+            + getActivity().getClass().getSimpleName()
+            + ", startInNanos="
+            + startInNanos);
     logScreenResume();
   }
 
@@ -150,9 +156,16 @@ public class LifecycleFragment extends Fragment {
   @Override
   public void onStop() {
     super.onStop();
-    LOG.atDebug("onStop host=" + getActivity().getClass().getSimpleName());
-    if (lifecycleChangeListener != null) {
-      lifecycleChangeListener.onStop();
+    long onStopTimestamp = System.nanoTime();
+    LOG.atDebug(
+        "onStop host="
+            + getActivity().getClass().getSimpleName()
+            + ", onStopTimestamp="
+            + onStopTimestamp);
+    if (VERSION.SDK_INT >= VERSION_CODES.Q && lifecycleChangeListener != null) {
+      PersistableBundle bundle = new PersistableBundle();
+      bundle.putLong("onScreenStop", onStopTimestamp);
+      lifecycleChangeListener.onStop(bundle);
     }
   }
 
