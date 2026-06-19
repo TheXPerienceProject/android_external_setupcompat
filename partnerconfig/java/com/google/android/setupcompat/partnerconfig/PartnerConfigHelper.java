@@ -1376,12 +1376,12 @@ public class PartnerConfigHelper {
                       /* arg= */ null,
                       /* extras= */ null);
         } catch (IllegalArgumentException | SecurityException exception) {
-          Log.w(TAG, "isGlifExpressiveEnabled status is unknown; return as false.");
+          Log.w(TAG, "isGlifExpressiveEnabled status is unknown; return as true.");
         }
       }
       Bundle resultBundle = applyGlifExpressiveBundle;
       if (resultBundle != null && !resultBundle.isEmpty()) {
-        return resultBundle.getBoolean(IS_GLIF_EXPRESSIVE_ENABLED, false);
+        return true;
       }
     }
     if (context.getTheme() != null) {
@@ -1389,7 +1389,7 @@ public class PartnerConfigHelper {
           context
               .getTheme()
               .obtainStyledAttributes(new int[] {R.attr.sucGlifExpressiveStyleEnabled});
-      boolean isGlifExpressiveStyleEnabled = a.getBoolean(0, false);
+      boolean isGlifExpressiveStyleEnabled = a.getBoolean(0, true);
       a.recycle();
       Log.i(TAG, "isGlifExpressiveStyleEnabled is " + isGlifExpressiveStyleEnabled);
       if (isGlifExpressiveStyleEnabled) {
@@ -1397,7 +1397,7 @@ public class PartnerConfigHelper {
       }
     }
 
-    return false;
+    return true;
   }
 
   /** Returns true if the SetupWizard supports delightful style during setup flow. */
