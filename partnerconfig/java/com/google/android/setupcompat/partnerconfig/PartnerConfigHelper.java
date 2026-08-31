@@ -346,8 +346,22 @@ public class PartnerConfigHelper {
         result = resource.getColor(resId);
       }
       partnerResourceCache.put(resourceConfig, result);
+      return result;
     } catch (NullPointerException exception) {
       // fall through
+    }
+
+    Resources appResource = context.getResources();
+    int resIdApp = appResource.getIdentifier(resourceConfig.getResourceName(), "color",
+        context.getPackageName());
+
+    if (resIdApp != 0) {
+      if (Build.VERSION.SDK_INT >= VERSION_CODES.M) {
+        result = appResource.getColor(resIdApp, null);
+      } else {
+        result = appResource.getColor(resIdApp);
+      }
+      partnerResourceCache.put(resourceConfig, result);
     }
     return result;
   }
