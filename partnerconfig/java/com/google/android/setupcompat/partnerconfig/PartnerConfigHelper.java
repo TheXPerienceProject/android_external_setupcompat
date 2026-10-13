@@ -304,7 +304,17 @@ public class PartnerConfigHelper {
 
       int resId = mContext.getResources().getIdentifier(resourceConfig.getResourceName(), resType,
           mContext.getPackageName());
-      return (resId != 0);
+      if (resId == 0) {
+        return false;
+      }
+      try {
+        mContext.getResources().getValue(resId, new TypedValue(), /* resolveRefs= */ true);
+        return true;
+      } catch (NotFoundException e) {
+        Log.w(TAG, "Partner resource " + resourceConfig.getResourceName()
+            + " has no value for the current configuration");
+        return false;
+      }
     }
   }
 
